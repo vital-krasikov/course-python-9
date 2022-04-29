@@ -10,10 +10,10 @@ class PlayerType(Enum):
 # класс Player моделирует поведение игрока и хранит все его данные
 class Player:
 
-    def __init__(self, player_type):
+    def __init__(self, player_type, player_num):
         self.type = player_type
         self.card = []
-        self.alias = "Новый игрок"
+        self.alias = ("Игрок " if player_type == PlayerType.HUMAN else "Комп ") + str(player_num)
         self.lost = False
         self.dash_count = 0
 
@@ -26,8 +26,8 @@ class Player:
     def get_card(self):
         return self.card
 
-    def set_alias(self, alias):
-        self.alias = alias
+    #def set_alias(self, alias):
+    #    self.alias = alias
 
     def get_alias(self):
         return self.alias
@@ -63,20 +63,13 @@ class Player:
 #  между игроками, а также пользовательский интерфейс. Объект класса соответствует одной игровой сессии
 class Session:
 
-    def __init__(self, player1, player2):
-        alias1 = self.player_alias(player1)
-        alias2 = self.player_alias(player2)
-        if player1.get_type() == player2.get_type():
-            alias1 += " 1"
-            alias2 += " 2"
-        player1.set_alias(alias1)
-        player2.set_alias(alias2)
+    def __init__(self, players_list):
 
-        self.player1 = player1
-        self.player2 = player2
+        self.num_of_lost = 0
 
-        self.player1.set_card(self.generate_card())
-        self.player2.set_card(self.generate_card())
+        self.players = players_list
+        for p in players_list:
+            p.set_card(self.generate_card())
 
     def run(self):
         App.print_start()
@@ -86,22 +79,24 @@ class Session:
             num = random.sample(bag_of_nums, 1)[0]
             bag_of_nums.remove(num)
             App.print_new_num(num, len(bag_of_nums))
-            App.print_card(self.player1.get_alias(), self.player1.get_card())
-            App.print_card(self.player2.get_alias(), self.player2.get_card())
-            self.player_turn(self.player1, num)
-            if self.player1.get_lost():
-                App.print_win(self.player2.get_alias())
-                break
-            if self.player1.get_dash_count() == 15:
-                App.print_win(self.player1.get_alias())
-                break
-            self.player_turn(self.player2, num)
-            if self.player2.get_lost():
-                App.print_win(self.player1.get_alias())
-                break
-            if self.player2.get_dash_count() == 15:
-                App.print_win(self.player2.get_alias())
-                break
+            for player in self.players:
+                if not player.get_lost():
+                    App.print_card(player.get_alias(), player.get_card())
+            for player in self.players:
+                if not player.get_lost():
+                    self.player_turn(player, num)
+                    if player.get_lost():
+                        App.print_lose(player.get_alias())
+                        self.num_of_lost += 1
+                        if self.num_of_lost == len(self.players) - 1:
+                            for p in self.players:
+                                if not p.get_lost():
+                                    App.print_win(p.get_alias())
+                                    return
+
+                if player.get_dash_count() == 15:
+                    App.print_win(player.get_alias())
+                    return
 
     @staticmethod
     def player_turn(player, num):
@@ -159,8 +154,8 @@ class Session:
 class App:
 
     def __init__(self):
-        self.first_player = PlayerType.HUMAN
-        self.second_player = PlayerType.CPU
+        self.num_of_players = 2
+        self.players = [PlayerType.HUMAN, PlayerType.CPU]
 
     @staticmethod
     def print_start():
@@ -191,16 +186,19 @@ class App:
         return input(alias + " - зачеркнуть число? (y/n) ")
 
     @staticmethod
+    def print_lose(alias):
+        input(alias + " проиграл!")
+
+    @staticmethod
     def print_win(alias):
-        print("Игра окончена! " + alias + " победил")
+        input("Игра окончена! " + alias + " победил")
 
     def run(self):
         option = 0
         while option != 4:
-            print("1. Поменять тип первого игрока (текущий - "+(
-                "человек)" if self.first_player == PlayerType.HUMAN else "компьютер)"))
-            print("2. Поменять тип второго игрока (текущий - " + (
-                "человек)" if self.second_player == PlayerType.HUMAN else "компьютер)"))
+            print("1. Изменить количество игроков (текущее: "+str(self.num_of_players)+")")
+            print("2. Изменить тип игрока (текущие: " + "".join([str(i+1) + " - " +
+                ("чел; " if self.players[i] == PlayerType.HUMAN else "комп; ") for i in range(self.num_of_players)]) + ")")
             print("3. Начать игру")
             print("4. Выход")
             try:
@@ -209,13 +207,33 @@ class App:
                 print("Введите число от 1 до 4!")
                 continue
             if option == 1:
-                self.first_player = (PlayerType.HUMAN if self.first_player == PlayerType.CPU else PlayerType.CPU)
+                try:
+                    quantity = int(input("Введите новое количество игроков (> 1) "))
+                except ValueError:
+                    print("Число игроков должно быть больше 1!")
+                    continue
+                if quantity <= 1:
+                    print("Число игроков должно быть больше 1!")
+                    continue
+                elif quantity > self.num_of_players:
+                    for i in range(quantity - self.num_of_players):
+                        self.players.append(PlayerType.CPU)
+                self.num_of_players = quantity
+
             elif option == 2:
-                self.second_player = (PlayerType.HUMAN if self.second_player == PlayerType.CPU else PlayerType.CPU)
+                try:
+                    num = int(input("Тип какого игрока изменить? (введите номер) "))
+                except ValueError:
+                    print("Введите число от 1 до " + str(self.num_of_players) + "!")
+                if 0 < num <= self.num_of_players:
+                    self.players[num-1] = (PlayerType.HUMAN if self.players[num-1] == PlayerType.CPU else PlayerType.CPU)
+                else:
+                    print("Введите число от 1 до " + str(self.num_of_players) + "!")
             elif option == 3:
-                player1 = Player(self.first_player)
-                player2 = Player(self.second_player)
-                session = Session(player1, player2)
+                players_list = []
+                for i in range(self.num_of_players):
+                    players_list.append(Player(self.players[i], i+1))
+                session = Session(players_list[:self.num_of_players])
                 session.run()
             elif option != 4:
                 print("Введите число от 1 до 4!")
