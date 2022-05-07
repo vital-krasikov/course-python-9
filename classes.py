@@ -1,6 +1,7 @@
 import random
 from enum import Enum
 
+
 # класс-перечисление для типов игроков
 class PlayerType(Enum):
     HUMAN = 0
@@ -11,52 +12,57 @@ class PlayerType(Enum):
 class Player:
 
     def __init__(self, player_type, player_num):
-        self.type = player_type
-        self.card = []
-        self.alias = ("Игрок " if player_type == PlayerType.HUMAN else "Комп ") + str(player_num)
-        self.lost = False
-        self.dash_count = 0
+        self._type = player_type
+        self._card = []
+        self._alias = ("Игрок " if player_type == PlayerType.HUMAN else "Комп ") + str(player_num)
+        self._lost = False
+        self._dash_count = 0
 
-    def get_type(self):
-        return self.type
+    @property
+    def type(self):
+        return self._type
 
-    def set_card(self, card):
-        self.card = card
+    @property
+    def card(self):
+        return self._card
 
-    def get_card(self):
-        return self.card
+    @card.setter
+    def card(self, card):
+        self._card = card
 
     #def set_alias(self, alias):
     #    self.alias = alias
 
-    def get_alias(self):
-        return self.alias
+    @property
+    def alias(self):
+        return self._alias
 
-    # get lost XD
-    def get_lost(self):
-        return self.lost
+    @property
+    def lost(self):
+        return self._lost
 
-    def get_dash_count(self):
-        return self.dash_count
+    @property
+    def dash_count(self):
+        return self._dash_count
 
     def check(self, number, check_by_hand=False):
-        if self.type == PlayerType.CPU:
+        if self._type == PlayerType.CPU:
             for i in range(3):
-                if number in self.card[i]:
-                    self.card[i][self.card[i].index(number)] = 99
-                    self.dash_count += 1
+                if number in self._card[i]:
+                    self._card[i][self._card[i].index(number)] = 99
+                    self._dash_count += 1
                     return
         else:
             for i in range(3):
-                if number in self.card[i]:
+                if number in self._card[i]:
                     if check_by_hand:
-                        self.card[i][self.card[i].index(number)] = 99
-                        self.dash_count += 1
+                        self._card[i][self._card[i].index(number)] = 99
+                        self._dash_count += 1
                     else:
-                        self.lost = True
+                        self._lost = True
                     return
             if check_by_hand:
-                self.lost = True
+                self._lost = True
 
 
 #  класс Session реализует основной функционал игры и обеспечивает взаимодействие
@@ -65,11 +71,11 @@ class Session:
 
     def __init__(self, players_list):
 
-        self.num_of_lost = 0
+        self._num_of_lost = 0
 
-        self.players = players_list
+        self._players = players_list
         for p in players_list:
-            p.set_card(self.generate_card())
+            p.card = self.generate_card()
 
     def run(self):
         App.print_start()
@@ -79,36 +85,36 @@ class Session:
             num = random.sample(bag_of_nums, 1)[0]
             bag_of_nums.remove(num)
             App.print_new_num(num, len(bag_of_nums))
-            for player in self.players:
-                if not player.get_lost():
-                    App.print_card(player.get_alias(), player.get_card())
-            for player in self.players:
-                if not player.get_lost():
+            for player in self._players:
+                if not player.lost:
+                    App.print_card(player.alias, player.card)
+            for player in self._players:
+                if not player.lost:
                     self.player_turn(player, num)
-                    if player.get_lost():
-                        App.print_lose(player.get_alias())
-                        self.num_of_lost += 1
-                        if self.num_of_lost == len(self.players) - 1:
-                            for p in self.players:
-                                if not p.get_lost():
-                                    App.print_win(p.get_alias())
+                    if player.lost:
+                        App.print_lose(player.alias)
+                        self._num_of_lost += 1
+                        if self._num_of_lost == len(self._players) - 1:
+                            for p in self._players:
+                                if not p.lost:
+                                    App.print_win(p.alias)
                                     return
 
-                if player.get_dash_count() == 15:
-                    App.print_win(player.get_alias())
+                if player.dash_count == 15:
+                    App.print_win(player.alias)
                     return
 
     @staticmethod
     def player_turn(player, num):
-        if player.get_type() == PlayerType.HUMAN:
-            move = App.input_move(player.get_alias())
+        if player.type == PlayerType.HUMAN:
+            move = App.input_move(player.alias)
             player.check(num, True if move == "y" or move == "Y" else False)
         else:
             player.check(num)
 
     @staticmethod
     def player_alias(player):
-        if player.get_type() == PlayerType.HUMAN:
+        if player.type == PlayerType.HUMAN:
             return "Игрок"
         else:
             return "Компьютер"
@@ -154,8 +160,8 @@ class Session:
 class App:
 
     def __init__(self):
-        self.num_of_players = 2
-        self.players = [PlayerType.HUMAN, PlayerType.CPU]
+        self._num_of_players = 2
+        self._players = [PlayerType.HUMAN, PlayerType.CPU]
 
     @staticmethod
     def print_start():
@@ -196,9 +202,9 @@ class App:
     def run(self):
         option = 0
         while option != 4:
-            print("1. Изменить количество игроков (текущее: "+str(self.num_of_players)+")")
+            print("1. Изменить количество игроков (текущее: "+str(self._num_of_players)+")")
             print("2. Изменить тип игрока (текущие: " + "".join([str(i+1) + " - " +
-                ("чел; " if self.players[i] == PlayerType.HUMAN else "комп; ") for i in range(self.num_of_players)]) + ")")
+                ("чел; " if self._players[i] == PlayerType.HUMAN else "комп; ") for i in range(self._num_of_players)]) + ")")
             print("3. Начать игру")
             print("4. Выход")
             try:
@@ -215,25 +221,25 @@ class App:
                 if quantity <= 1:
                     print("Число игроков должно быть больше 1!")
                     continue
-                elif quantity > self.num_of_players:
-                    for i in range(quantity - self.num_of_players):
-                        self.players.append(PlayerType.CPU)
-                self.num_of_players = quantity
+                elif quantity > self._num_of_players:
+                    for i in range(quantity - self._num_of_players):
+                        self._players.append(PlayerType.CPU)
+                self._num_of_players = quantity
 
             elif option == 2:
                 try:
                     num = int(input("Тип какого игрока изменить? (введите номер) "))
                 except ValueError:
-                    print("Введите число от 1 до " + str(self.num_of_players) + "!")
-                if 0 < num <= self.num_of_players:
-                    self.players[num-1] = (PlayerType.HUMAN if self.players[num-1] == PlayerType.CPU else PlayerType.CPU)
+                    print("Введите число от 1 до " + str(self._num_of_players) + "!")
+                if 0 < num <= self._num_of_players:
+                    self._players[num-1] = (PlayerType.HUMAN if self._players[num-1] == PlayerType.CPU else PlayerType.CPU)
                 else:
-                    print("Введите число от 1 до " + str(self.num_of_players) + "!")
+                    print("Введите число от 1 до " + str(self._num_of_players) + "!")
             elif option == 3:
                 players_list = []
-                for i in range(self.num_of_players):
-                    players_list.append(Player(self.players[i], i+1))
-                session = Session(players_list[:self.num_of_players])
+                for i in range(self._num_of_players):
+                    players_list.append(Player(self._players[i], i+1))
+                session = Session(players_list[:self._num_of_players])
                 session.run()
             elif option != 4:
                 print("Введите число от 1 до 4!")
