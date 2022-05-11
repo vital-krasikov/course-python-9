@@ -16,6 +16,16 @@ class TestPlayer:
                and player._card == [] and player._alias == "Комп 1" and player._lost is False \
                and player._dash_count == 0
 
+    def test_str(self):
+        player = Player(PlayerType.HUMAN, 1)
+        assert str(player) == "Игрок 1"
+
+    def test_eq(self):
+        player1 = Player(PlayerType.HUMAN, 1)
+        player2 = Player(PlayerType.CPU, 2)
+        assert player1 == player1
+        assert player1 != player2
+
     def test_type(self):
         player = Player(PlayerType.HUMAN, 1)
         assert player.type == PlayerType.HUMAN
@@ -29,9 +39,9 @@ class TestPlayer:
         player.card = [1, 2, 3, 4, 5]  # вообще говоря, не карточка, но нам неважно, мы сеттер тестируем
         assert player.card == [1, 2, 3, 4, 5]
 
-    def test_alias(self):
-        player = Player(PlayerType.HUMAN, 1)
-        assert player.alias == "Игрок 1"
+    #def test_alias(self):
+    #    player = Player(PlayerType.HUMAN, 1)
+    #    assert player.alias == "Игрок 1"
 
     def test_lost(self):
         player = Player(PlayerType.HUMAN, 1)
@@ -79,17 +89,67 @@ class TestSession:
         player1 = Player(PlayerType.HUMAN, 1)
         player2 = Player(PlayerType.CPU, 2)
 
-        session = Session([player1, player2])
+        session = Session(1, [player1, player2])
         assert session is not None and session._num_of_lost == 0 and session._players == [player1, player2]
 
-    # тестить run сложно, поскольку придется лезть в стандартные потоки ввода-вывода, не знаю, имеет ли это смысл
-    # аналогичная ситуация с player_turn
-
-    def test_player_alias(self):
+    def test_str(self):
         player1 = Player(PlayerType.HUMAN, 1)
         player2 = Player(PlayerType.CPU, 2)
 
-        assert Session.player_alias(player1) == "Игрок" and Session.player_alias(player2) == "Компьютер"
+        session = Session(1, [player1, player2])
+        assert str(session) == "Игровая сессия 1. Игроки: [\'Игрок 1\', \'Комп 2\']"
+
+    def test_len(self):
+        player1 = Player(PlayerType.HUMAN, 1)
+        player2 = Player(PlayerType.CPU, 2)
+
+        session = Session(1, [player1, player2])
+        assert len(session) == 2
+
+    def test_contains(self):
+        player1 = Player(PlayerType.HUMAN, 1)
+        player2 = Player(PlayerType.CPU, 2)
+
+        session = Session(1, [player1, player2])
+        assert player1 in session
+
+    def test_getitem(self):
+        player1 = Player(PlayerType.HUMAN, 1)
+        player2 = Player(PlayerType.CPU, 2)
+
+        session = Session(1, [player1, player2])
+        #заодно потестим еще раз сравнение класса Player
+        assert session[0] == player1
+
+    def test_eq(self):
+        player1 = Player(PlayerType.HUMAN, 1)
+        player2 = Player(PlayerType.CPU, 2)
+        player2_prime = Player(PlayerType.HUMAN, 2)
+
+        session1 = Session(1, [player1, player2])
+        session2 = Session(2, [player1, player2])
+        session3 = Session(3, [player1, player2_prime])
+
+        assert session1 == session1
+        assert session1 != session2
+        assert session2 != session3
+
+    def test_id(self):
+        player1 = Player(PlayerType.HUMAN, 1)
+        player2 = Player(PlayerType.CPU, 2)
+
+        session = Session(1, [player1, player2])
+        assert session.id == 1
+
+    def test_players(self):
+        player1 = Player(PlayerType.HUMAN, 1)
+        player2 = Player(PlayerType.CPU, 2)
+
+        session = Session(1, [player1, player2])
+        assert session.players == [player1, player2]
+
+    # тестить run сложно, поскольку придется лезть в стандартные потоки ввода-вывода, не знаю, имеет ли это смысл
+    # аналогичная ситуация с player_turn
 
     def test_generate_card(self):
         card = Session.generate_card()
@@ -106,6 +166,35 @@ class TestApp:
         app = App()
 
         assert app is not None and app._num_of_players == 2 and app._players == [PlayerType.HUMAN, PlayerType.CPU]
+
+    def test_str(self):
+        app = App()
+
+        assert str(app) == "Игра Лото. Текущая сессия - 0"
+
+    def test_eq(self):
+        app1 = App()
+        app2 = App()
+
+        assert app1 == app1
+        # к сожалению, без присвоения ID приложению такое сравнение будет работать и так
+        # в целом, сравнение в классе приложение не особо осмысленно, предполагается, что приложение у нас одно
+        assert app1 == app2
+
+    def test_num_of_players(self):
+        app = App()
+
+        assert app.num_of_players == 2
+
+    def test_players(self):
+        app = App()
+
+        assert app.players == [PlayerType.HUMAN, PlayerType.CPU]
+
+    def test_session_num(self):
+        app = App()
+
+        assert app.session_num == 0
 
     # Не знаю, как протестировать вывод в консоль, тот код, который закомментирован ниже - не работает!
     # def test_print_start(self):

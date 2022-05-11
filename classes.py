@@ -18,6 +18,13 @@ class Player:
         self._lost = False
         self._dash_count = 0
 
+    def __str__(self):
+        return self._alias
+
+    def __eq__(self, other):
+        # в рамках нашей программы можно сравнивать только алиасы, но, вообще говоря, нужны какие-то уникальные ID
+        return self._alias == str(other)
+
     @property
     def type(self):
         return self._type
@@ -33,9 +40,10 @@ class Player:
     #def set_alias(self, alias):
     #    self.alias = alias
 
-    @property
-    def alias(self):
-        return self._alias
+    # вместо свойства alias у нас теперь __str__, потому что логика та же
+    #@property
+    #def alias(self):
+    #    return self._alias
 
     @property
     def lost(self):
@@ -69,13 +77,46 @@ class Player:
 #  между игроками, а также пользовательский интерфейс. Объект класса соответствует одной игровой сессии
 class Session:
 
-    def __init__(self, players_list):
+    def __init__(self, ID, players_list):
 
         self._num_of_lost = 0
+        self._ID = ID
 
         self._players = players_list
         for p in players_list:
             p.card = self.generate_card()
+
+    def __str__(self):
+        return "Игровая сессия " + str(self._ID) + ". Игроки: " + str([str(p) for p in self._players])
+
+    def __eq__(self, other):
+        if self._ID != other.id:
+            return False
+        # сравниваем по набору игроков
+        for player in self._players:
+            if player not in other.players:
+                return False
+        return True
+
+    # поскольку Session - это контейнер, добавим вычисление длины, проверку принадлежности и получение значения
+    # по индексу
+
+    def __len__(self):
+        return len(self.players)
+
+    def __contains__(self, item):
+        return item in self.players
+
+    def __getitem__(self, item):
+        return self.players[item]
+
+    @property
+    def id(self):
+        return self._ID
+
+    @property
+    def players(self):
+        return self._players
 
     def run(self):
         App.print_start()
@@ -87,37 +128,30 @@ class Session:
             App.print_new_num(num, len(bag_of_nums))
             for player in self._players:
                 if not player.lost:
-                    App.print_card(player.alias, player.card)
+                    App.print_card(str(player), player.card)
             for player in self._players:
                 if not player.lost:
                     self.player_turn(player, num)
                     if player.lost:
-                        App.print_lose(player.alias)
+                        App.print_lose(str(player))
                         self._num_of_lost += 1
                         if self._num_of_lost == len(self._players) - 1:
                             for p in self._players:
                                 if not p.lost:
-                                    App.print_win(p.alias)
+                                    App.print_win(str(p))
                                     return
 
                 if player.dash_count == 15:
-                    App.print_win(player.alias)
+                    App.print_win(str(player))
                     return
 
     @staticmethod
     def player_turn(player, num):
         if player.type == PlayerType.HUMAN:
-            move = App.input_move(player.alias)
+            move = App.input_move(str(player))
             player.check(num, True if move == "y" or move == "Y" else False)
         else:
             player.check(num)
-
-    @staticmethod
-    def player_alias(player):
-        if player.type == PlayerType.HUMAN:
-            return "Игрок"
-        else:
-            return "Компьютер"
 
     @staticmethod
     def generate_card():
@@ -162,6 +196,26 @@ class App:
     def __init__(self):
         self._num_of_players = 2
         self._players = [PlayerType.HUMAN, PlayerType.CPU]
+        self._session_num = 0
+
+    def __str__(self):
+        return "Игра Лото. Текущая сессия - " + str(self._session_num)
+
+    def __eq__(self, other):
+        return self._num_of_players == other.num_of_players and self._players == other.players and \
+               self._session_num == other.session_num
+
+    @property
+    def num_of_players(self):
+        return self._num_of_players
+
+    @property
+    def players(self):
+        return self._players
+
+    @property
+    def session_num(self):
+        return self._session_num
 
     @staticmethod
     def print_start():
@@ -239,7 +293,9 @@ class App:
                 players_list = []
                 for i in range(self._num_of_players):
                     players_list.append(Player(self._players[i], i+1))
-                session = Session(players_list[:self._num_of_players])
+                self._session_num += 1
+                session = Session(self._session_num, players_list[:self._num_of_players])
+                print(session)
                 session.run()
             elif option != 4:
                 print("Введите число от 1 до 4!")
